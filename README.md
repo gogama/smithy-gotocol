@@ -5,9 +5,8 @@ Generates Go code from AWS Labs' Smithy API modelling language
 
 Next steps.
 
-1. Validate changing generic handler function signature.
-2. Design repo and package layout for runtime components and note
-   whether they are part of smithy-gen or a different repo.
+1. Validate changing generic handler function signature. Just try this
+   out in a playground and link it back.
 
 ---
 
@@ -50,7 +49,77 @@ A few tricky points are:
 1. System needs to support `httpPayload` trait on input and output, in a
    way that is sensible, keeping in mind it might contain a `blob` or a
    `document` or a `string` or anything.
+2. Need to be extensible to support other serde formats besides default
+   JSON.
 
+---
+
+Sketch package layout:
+
+cmd/
+   smithy-gen/   [Builds to smithy-gen binary directly usable as go-generate binary]
+      main.go    [And code directly needed for CLI.]
+generate/
+   httpjson/    [Codegen for HTTP/json]
+runtime/
+   httpjson/    [Runtime for HTTP/json, depended on by generated code.]    
+server/
+   [Common server config types and concepts.]
+   lambdaserver/
+       lambdaapig/
+
+---
+
+Sketch CLI invocation:
+
+CLI will support a hybrid JSON/args approach where any args you don't
+specify on the CLI can be read from a residual JSON file. The reason
+for the hybrid approach rather than only args is that if customer wants
+to go-generate different "slices" into multiple Go files, it will be
+nice for all go-generate statements to be able to reference a common
+config so it can be edited once and effect all instances simultaneously.
+
+smithy-gen.json:
+
+```json
+{
+  "protocol": {
+     "transport": "http",
+     "serde": "json"
+  },
+  "filter": {
+     "services": ["com.foo.bar#MyService"],
+     "operations": ["com.foo.bar#FooOp", "com.foo.bar#BarOp"],
+     "operation-shapes": true,
+     "prelude-shapes": true,
+     "user-shapes": true
+  },
+  "name": {
+    "initialisms": true, 
+    "add-initialisms": [
+       "laser"
+    ],
+    "remove-initialisms": [
+    ],
+    "remove-underscores": true
+  },
+  "required": {
+     "value-pointer": false
+  }
+}
+```
+
+- JSON is the only supported protocol off the bat. This is relevant only to
+  the SerForHTTP() and DeserForHTTP() methods of Structure interface.
+- Service can be omitted in which case it does all services.
+- Operation can be omitted in which case it does all operations.
+- The boolean filters all default to true and let you control whether you want
+  operation shapes, prelude model shapes, and non-operation user shapes
+  generated in that file. Normally these would be used on the CLI command line.
+- Default initialism fixing is on by default but can be disabled - it will
+  properly treat words like "id", "arn", "api" and so on.
+- Required pointer is off by default. You can set it true if you want your
+  @required members to be pointers (only affects value types).
 
 ---
 
@@ -72,10 +141,14 @@ type ValidationError interface {
 	// TODO: Fields for identifying the specific error(s).
 }
 
-type Structure interface {
+type Shape interface {
     SerForHTTP([]byte, http.Header) error
 	DeserForHTTP([]byte, http.Header) error
 	Validate() ValidationError
+}
+
+type Structure interface {
+	Shape
 }
 
 type Operation[Input, Output Structure] struct {
