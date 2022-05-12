@@ -36,6 +36,12 @@ Sketch idea follows.
    their input and output structure types. This should allow us to
    initialize the runtime (_e.g._ Lambda handler for APIG events) without
    having to _generate_ handler code.
+8. The runtime system should have a hook to allow the plugged-in customer
+   to allocate a context, and all the handler events should accept the
+   context. The hook should accept a parent context.Context plus any
+   other contextual data (e.g. Lambda event) and should return a
+   generic type constrained to be a context.Context (so the customer
+   can implement own context as long as it implements context.Context). 
 
 ---
 
@@ -56,6 +62,7 @@ Runtime library includes:
 package runtime
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 )
@@ -88,7 +95,7 @@ func [Input, Output Structure] NewOperation(i Input, o Output, method, uri strin
     }
 }
 
-type Orchestrator struct { // Maybe a better name is Server?
+type Orchestrator[Context context.Context] struct { // Maybe a better name is Server?
 	// TODO: (1) Design a mapping and invoking system that allows the orchestrator
 	//           to instantiate the structure type AND, more importantly (because
 	//           it is liable to be more difficult) call the handler function in
@@ -97,7 +104,7 @@ type Orchestrator struct { // Maybe a better name is Server?
 	// TODO: (2) Design handler plugin system.
 }
 
-func (o *Orchestrator) [Input, Output Structure] AddOperation(o Operation[Input, Output], handler func(i Input) (Output, error)) {
+func (o *Orchestrator[Context]) [Input, Output Structure] AddOperation(o Operation[Input, Output], handler func(ctx Context, i Input) (Output, error)) {
 	// Somehow this will install handler as a handler for operation o.
 	//
 	// The way this will work in practice is that users will init the
