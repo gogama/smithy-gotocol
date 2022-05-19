@@ -5,7 +5,11 @@ Generates Go code from AWS Labs' Smithy API modelling language
 
 Next steps.
 
-1. Validate changing generic handler function signature. Just try this
+1. Rename this repo to smithy-gen-go, as we are possibly also going to
+   want generators for other modelling languages like OpenAPI, and
+   other programming languages, and I don't want it all to live with the
+   Go code generator.
+2. Validate changing generic handler function signature. Just try this
    out in a playground and link it back.
 
 ---
