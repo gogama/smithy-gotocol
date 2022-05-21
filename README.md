@@ -1,5 +1,6 @@
-# smithy-gen
-Generates Go code from AWS Labs' Smithy API modelling language
+# smithy-gotocol
+
+Client/server interfaces and code generator for using AWS Labs' Smithy language in Go
 
 ---
 
